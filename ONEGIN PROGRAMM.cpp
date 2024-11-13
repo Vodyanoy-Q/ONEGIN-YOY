@@ -1,132 +1,294 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <string.h>
+#include <ctype.h>
 
-void ArraysCount(int * arr_count, int * symbols_counter);
-void MaxArraySize(int * arr_count, int * max_arr_size);
-void GetText(char * text, int * symbols_counter);
-void GetArrayAddres(char * text, int * array_addres, int * symbols_counter);
+struct str_info
+{
+    const char * str;
+    size_t len;
+};
+
+size_t GetFileSize(FILE * ONEGIN);
+int StrCounter(char * text, size_t symbols);
+void GetStrAddres(char * text, size_t symbols, str_info * str_data, str_info ** str_data_addres);
+void BubbleSort(void ** data_addres, const int addres_data_size, int Comparator(void * data_1, void * data_2));
+int StrComparator(void * addres_1, void * addres_2);
+int ReverseStrComparator(void * addres_1, void * addres_2);
 
 int main()
 {
-    int arr_count = 0;
-    int max_arr_size = 0;
-    int symbols_counter = 0;
+    FILE * ONEGIN = fopen("ONEGIN.txt", "rb");
 
-    ArraysCount(&arr_count, &symbols_counter);
+    assert(ONEGIN);
 
-    int * array_addres = (int*)calloc(arr_count, sizeof(int));
+    size_t symbols = GetFileSize(ONEGIN);
 
-    MaxArraySize(&arr_count, &max_arr_size);
+    char * text = (char*)calloc(symbols + 1, sizeof(char));
 
-    char * text = (char*)calloc(symbols_counter, sizeof(char));
-    char * sorted_text = (char*)calloc(symbols_counter, sizeof(char));
+    fread((void*)text, sizeof(char), symbols, ONEGIN);
 
-    GetText(text, &symbols_counter);
-    GetArrayAddres(text, array_addres, &symbols_counter);
+    assert(fclose(ONEGIN) == 0);
 
-    for (int i = 0; i < arr_count; i++)
+    const int str_counter = StrCounter(text, symbols);
+
+    str_info * str_data = (str_info*)calloc(str_counter + 1, sizeof(str_info));
+    str_info ** str_data_addres = (str_info**)calloc(str_counter + 1, sizeof(str_info*));
+
+    GetStrAddres(text, symbols, str_data, str_data_addres);
+
+//    for(int i = 0; i < str_counter; i++)
+//    {
+//        printf("%d %s\n", str_data[i].len, str_data[i].str);
+//    }
+
+    printf("=============\n"
+           "ORIGINAL TEXT\n"
+           "=============\n");
+
+    for(int i = 0; i <= str_counter - 1; i++)
     {
-        printf("%d\n", array_addres[i]);
+        printf("%s\n", (*str_data_addres[i]).str);
     }
 
-    for (int i = 0; i < symbols_counter; i++)
+    printf("=============\n"
+           " SORTED TEXT\n"
+           "=============\n");
+    BubbleSort((void**)str_data_addres, str_counter, StrComparator);
+
+    free(text);
+    free(str_data_addres);
+    free(str_data);
+
+    return 0;
+}
+
+size_t GetFileSize(FILE * ONEGIN)
+{
+    assert(ONEGIN);
+
+    fseek(ONEGIN, 0L, SEEK_END);
+
+    size_t symbols = ftell(ONEGIN);
+
+    rewind(ONEGIN);
+
+    return symbols;
+}
+
+int StrCounter(char * text, size_t symbols)
+{
+    assert(text);
+
+    int counter = 0;
+
+    size_t i = 0;
+
+    for (i = 0; i < symbols; i++)
     {
-        printf("%c", text[i]);
+        if (text[i] == '\r')
+        {
+            text[i] = '\0';
+            text[i + 1] = '\0';
+            counter++;
+        }
+    }
+
+    return counter;
+}
+
+void GetStrAddres(char * text, size_t symbols, str_info * str_data, str_info ** str_data_addres)
+{
+    assert(text);
+    assert(str_data);
+
+    int str_counter = 0;
+
+    str_info data = {(const char*)text, strlen((const char*)text)};
+
+    str_data[0] = data;
+
+    str_data_addres[0] = &str_data[0];
+
+    for(size_t i = 0; i < symbols; i++)
+    {
+        if (text[i] == '\0')
+        {
+            data = {(const char*)(text + i + 2), strlen((const char*)(text + i + 2))};
+
+            str_counter += 1;
+
+            str_data[str_counter] = data;
+
+            str_data_addres[str_counter] = &str_data[str_counter];
+
+            i++;
+        }
+    }
+}
+
+void BubbleSort(void ** data_addres, const int addres_data_size, int Comparator(void * data_1, void * data_2))
+{
+    assert(data_addres);
+
+    void * switcher = 0;
+
+    for(int j = 0; j < addres_data_size - 1; j++)
+    {
+        for(int i = 0; i < addres_data_size - 1; i++)
+        {
+            if (Comparator(data_addres[i], data_addres[i + 1]) > 0)
+            {
+                assert(data_addres[i]);
+                assert(data_addres[i + 1]);
+
+                switcher = data_addres[i + 1];
+
+                data_addres[i + 1] = data_addres[i];
+
+                data_addres[i] = switcher;
+            }
+        }
+    }
+
+    for(int i = 0; i <= addres_data_size - 1; i++)
+    {
+        printf("%s\n", (*(str_info*)(data_addres[i])).str);
+    }
+}
+
+int StrComparator(void * addres_1, void * addres_2)
+{
+    assert(addres_1);
+    assert(addres_2);
+
+    size_t i = 0;
+    size_t j = 0;
+
+    str_info str_data_1 = *(str_info*)addres_1;
+    str_info str_data_2 = *(str_info*)addres_2;
+
+    /*while (!isalpha(str_data_1.str[i]))
+    {
+        i++;
+    }
+
+
+    while (!isalpha(str_data_2.str[j]))
+    {
+        j++;
+    }
+
+    while (str_data_1.str[i] == str_data_2.str[j])
+    {
+        i++;
+        j++;
+    }   */
+
+    while(1)
+    {
+        assert(str_data_1.str[i]);       //             СЁ
+        assert(str_data_2.str[j]);
+
+        if(i == str_data_1.len)
+        {
+            return 0;
+        }
+
+        if(j == str_data_2.len)
+        {
+            return 1;
+        }
+
+        if (!isalpha(str_data_1.str[i]))
+        {
+            i++;
+            continue;
+        }
+
+        if (!isalpha(str_data_2.str[j]))
+        {
+            j++;
+            continue;
+        }
+
+        if (tolower(str_data_1.str[i]) == tolower(str_data_2.str[j]))
+        {
+            i++;
+            j++;
+            continue;
+        }
+
+        if (tolower(str_data_1.str[i]) > tolower(str_data_2.str[j]))
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     return 0;
 }
 
-void ArraysCount(int * arr_count, int * symbols_counter)
+int ReverseStrComparator(void * addres_1, void * addres_2)
 {
-    assert(arr_count);
+    assert(addres_1);
+    assert(addres_2);
 
-    FILE * ONEGIN = fopen("ONEGIN.txt", "r");  //w
+    str_info str_data_1 = *(str_info*)addres_1;
+    str_info str_data_2 = *(str_info*)addres_2;
 
-    int ch = 0;
 
-    do
+    size_t i = str_data_1.len - 1;
+    size_t j = str_data_2.len - 1;
+
+
+    while(1)
     {
-        ch = getc(ONEGIN);
+        assert(str_data_1.str[i]);       //             СЁ
+        assert(str_data_2.str[j]);                                        //
 
-        if (ch == '\n' || ch == EOF)
+        if(i == 0)
         {
-            * arr_count = * arr_count + 1;
+            return 0;
         }
-        * symbols_counter = * symbols_counter + 1;
-    }
-    while (ch != EOF);
 
-    fclose(ONEGIN);
-}
-
-void MaxArraySize(int * arr_count, int * max_arr_size)
-{
-    assert(arr_count);
-    assert(max_arr_size);
-
-    FILE * ONEGIN = fopen("ONEGIN.txt", "r");
-
-    int ch = 0;
-    int slash_n_counter = 0;
-
-    do
-    {
-        ch = getc(ONEGIN);
-
-        if (ch == '\n' || ch == EOF)
+        if(j == 0)
         {
-            if (slash_n_counter > * max_arr_size)
-            {
-                * max_arr_size = slash_n_counter;
-            }
-            slash_n_counter = 0;
+            return 1;
+        }
+
+        if (!isalpha(str_data_1.str[i]))
+        {
+            i--;
+            continue;
+        }
+
+        if (!isalpha(str_data_2.str[j]))
+        {
+            j--;
+            continue;
+        }
+
+        if (tolower(str_data_1.str[i]) == tolower(str_data_2.str[j]))
+        {
+            i--;
+            j--;
+            continue;
+        }
+
+        if (tolower(str_data_1.str[i]) > tolower(str_data_2.str[j]))
+        {
+            return 1;
         }
         else
         {
-            slash_n_counter++;
+            return 0;
         }
     }
-    while(ch != EOF);
-
-    fclose(ONEGIN);
+    return 0;
 }
 
-void GetText(char * text, int * symbols_counter)
-{
-    assert(text);
-    assert(symbols_counter);
-
-    FILE * ONEGIN = fopen("ONEGIN.txt", "r");
-
-    for(int i = 0; i < * symbols_counter; i++)
-    {
-        text[i] = getc(ONEGIN);
-    }
-    fclose(ONEGIN);
-}
-
-void GetArrayAddres(char * text, int * array_addres, int * symbols_counter)
-{
-    assert(text);
-
-    int slash_n_counter = 0;
-    int addres_counter = 1;
-
-    array_addres[0] = int(text);
-
-    for(int i = 0; i < * symbols_counter; i++)
-    {
-        if (text[i] == '\n')
-        {
-            array_addres[addres_counter] = (int(text) + slash_n_counter * sizeof(char));
-            slash_n_counter++;
-            addres_counter++;
-        }
-        else
-        {
-            slash_n_counter++;
-        }
-    }
-}
